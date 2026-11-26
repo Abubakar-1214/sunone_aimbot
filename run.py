@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import os
+os.environ["OPENBLAS_NUM_THREADS"] = "4"
+
 from ultralytics import YOLO
 import torch
 import supervision as sv
@@ -18,7 +21,6 @@ def perform_detection(model, image, tracker: ByteTrackTracker | None = None):
         conf=cfg.AI_conf,
         iou=0.50,
         device=cfg.AI_device,
-        half="cpu" not in ai_device,
         max_det=20,
         agnostic_nms=False,
         augment=False,
@@ -33,6 +35,9 @@ def perform_detection(model, image, tracker: ByteTrackTracker | None = None):
         stream=True
     )
 
+    if "cpu" not in ai_device:
+        kwargs["half"] = True
+
     kwargs["cfg"] = "logic/tracker.yaml" if tracker else "logic/game.yaml"
 
     results = model.predict(**kwargs)
@@ -44,8 +49,20 @@ def perform_detection(model, image, tracker: ByteTrackTracker | None = None):
     else:
         return next(results, None)
 
+def ask_team_selection():
+    target_team = "TERRORIST (T)" if cfg.my_team.upper() == "CT" else "COUNTER-TERRORIST (CT)"
+    filter_status = "ENABLED [F6]" if cfg.team_filter_enabled else "DISABLED [F6] (Deathmatch Mode)"
+    print("\n" + "=" * 56)
+    print("        CS2 ACTIVE AIMBOT RUNNING")
+    print("=" * 56)
+    print(f"[AIMBOT] AAPKI TEAM:   [{cfg.my_team.upper()}] (Press [F5] to Switch)")
+    print(f"[AIMBOT] TARGET ENEMY:  [{target_team}]")
+    print(f"[AIMBOT] TEAM FILTER:   {filter_status}")
+    print("=" * 56 + "\n")
+
 def init():
     run_checks()
+    ask_team_selection()
     from logic.capture import capture
     from logic.visual import visuals
     from logic.frame_parser import frameParser
@@ -77,6 +94,7 @@ def init():
             continue
 
         result = perform_detection(model, image, tracker)
+        frameParser.current_frame = image   # team_filter ke liye frame pass karna
         frameParser.parse(result)
 
         if cfg.show_window or cfg.show_overlay:

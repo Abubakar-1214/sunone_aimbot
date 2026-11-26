@@ -9,6 +9,7 @@ from logic.visual import visuals
 from logic.mouse import mouse
 from logic.shooting import shooting
 from logic.model_classes import HEAD_CLASS_ID, is_head_class
+from logic.team_filter import is_friendly
 
 class Target:
     def __init__(self, x, y, w, h, cls):
@@ -23,6 +24,17 @@ class FrameParser:
         self.arch = self.get_arch()
         self._center = None
         self._center_cache_key = None
+        self.locked_target_pos = None
+        self.locked_frames_lost = 0
+        self.current_frame = None   # run.py se set hota hai (team filter ke liye)
+
+    def reset_lock(self):
+        self.locked_target_pos = None
+        self.locked_frames_lost = 0
+        try:
+            mouse.reset_filter()
+        except Exception:
+            pass
 
     def parse(self, result):
         if result is None:
@@ -62,10 +74,19 @@ class FrameParser:
 
     def _handle_target(self, target):
         if target:
+            # Agar F1 se shooting disabled hai to mouse/shoot mat karo, detection chalti rahegi
+            if not hotkeys_watcher.auto_mode_enabled:
+                shooting.shoot(False, False)
+                return
+
             if hotkeys_watcher.clss is None:
                 hotkeys_watcher.active_classes()
 
             if target.cls in hotkeys_watcher.clss:
+                # Team filter: apni team par fire nahi karni
+                if is_friendly(self.current_frame, target.x, target.y, target.w, target.h, target.cls):
+                    self._handle_no_detections()
+                    return
                 mouse.process_data((target.x, target.y, target.w, target.h, target.cls))
 
     def _visualize_frame(self, frame):
@@ -77,6 +98,15 @@ class FrameParser:
                 visuals.draw_speed(frame.speed['preprocess'], frame.speed['inference'], frame.speed['postprocess'])
 
     def _handle_no_detections(self):
+        self.locked_frames_lost += 1
+        # Target memory: Target ko 15-25 frames tak pakad kar rakhe, chhore na
+        max_lost = 25 if shooting.button_pressed else 15
+        if self.locked_frames_lost > max_lost:
+            self.locked_target_pos = None
+            try:
+                mouse.reset_filter()
+            except Exception:
+                pass
         if cfg.show_window or cfg.show_overlay:
             visuals.clear()
         if cfg.auto_shoot or cfg.triggerbot:
@@ -115,34 +145,74 @@ class FrameParser:
         return torch.as_tensor(value, dtype=dtype, device=self.arch)
 
     def _find_nearest_target(self, boxes_array, classes_tensor):
-        center = self._get_center(boxes_array.device)
-        distances_sq = torch.sum((boxes_array[:, :2] - center) ** 2, dim=1)
         candidate_idxs = self._get_active_candidate_idxs(classes_tensor)
 
         if candidate_idxs.numel() == 0:
+            self.locked_target_pos = None
             return None
 
         head_candidate_mask = classes_tensor[candidate_idxs] == HEAD_CLASS_ID
 
         if cfg.disable_headshot:
             non_head_candidate_idxs = candidate_idxs[~head_candidate_mask]
-
             if non_head_candidate_idxs.numel() == 0:
+                self.locked_target_pos = None
                 return None
-
-            size_factor = (boxes_array[:, 2] * boxes_array[:, 3]).clamp_min(1.0)
-            distances_sq = distances_sq / size_factor
             candidate_idxs = non_head_candidate_idxs
-            nearest_idx = candidate_idxs[torch.argmin(distances_sq[candidate_idxs])].item()
         else:
             if head_candidate_mask.any():
                 candidate_idxs = candidate_idxs[head_candidate_mask]
-            nearest_idx = candidate_idxs[torch.argmin(distances_sq[candidate_idxs])].item()
 
-        target_data = boxes_array[nearest_idx, :4].cpu().numpy()
-        target_class = int(classes_tensor[nearest_idx].item())
+        # TEAM FILTER: Apni team ke members ko filter out karo taake sirf ENEMIES par aim ho
+        if cfg.team_filter_enabled and self.current_frame is not None and candidate_idxs.numel() > 0:
+            enemy_candidates = []
+            for c_idx in candidate_idxs:
+                bx, by, bw, bh = boxes_array[c_idx, :4]
+                bcls = int(classes_tensor[c_idx].item())
+                if not is_friendly(self.current_frame, float(bx), float(by), float(bw), float(bh), bcls):
+                    enemy_candidates.append(c_idx.item())
 
-        return Target(*target_data, target_class)
+            if len(enemy_candidates) > 0:
+                candidate_idxs = torch.tensor(enemy_candidates, dtype=torch.long, device=boxes_array.device)
+            else:
+                # Sab samne wale teammates hain! Inpar lock/fire mat karo
+                self.locked_target_pos = None
+                return None
+
+        # STICKY TARGET LOCK: Follow the same enemy as they move
+        chosen_idx = None
+        if self.locked_target_pos is not None:
+            last_x, last_y = self.locked_target_pos
+            ref_pos = torch.tensor([last_x, last_y], dtype=torch.float32, device=boxes_array.device)
+            dist_to_locked = torch.sum((boxes_array[candidate_idxs, :2] - ref_pos) ** 2, dim=1)
+            min_dist_val, min_dist_sub = torch.min(dist_to_locked, dim=0)
+
+            # Follow radius (up to 350px so fast running enemies are never dropped)
+            if min_dist_val.item() <= (350.0 ** 2):
+                chosen_idx = candidate_idxs[min_dist_sub].item()
+                self.locked_frames_lost = 0
+            else:
+                self.locked_frames_lost += 1
+                max_lost_frames = 12 if shooting.button_pressed else 6
+                if self.locked_frames_lost > max_lost_frames:
+                    self.locked_target_pos = None
+
+        # If not tracking or target lost, pick target closest to screen crosshair center
+        if chosen_idx is None:
+            center = self._get_center(boxes_array.device)
+            distances_sq = torch.sum((boxes_array[candidate_idxs, :2] - center) ** 2, dim=1)
+            min_center_sub = torch.argmin(distances_sq).item()
+            chosen_idx = candidate_idxs[min_center_sub].item()
+            self.locked_frames_lost = 0
+
+        target_data = boxes_array[chosen_idx, :4].cpu().numpy()
+        target_class = int(classes_tensor[chosen_idx].item())
+        target = Target(*target_data, target_class)
+
+        # Update locked position for continuous tracking
+        self.locked_target_pos = (target.x, target.y)
+
+        return target
 
     def _get_active_candidate_idxs(self, classes_tensor):
         if hotkeys_watcher.clss is None:

@@ -39,7 +39,7 @@ class Config:
                 "hideout_targets": "false",
                 "disable_headshot": "false",
                 "disable_prediction": "false",
-                "prediction_interval": "0.05",
+                "prediction_interval": "0.045",
             },
             "Hotkeys": {
                 "hotkey_targeting": "RightMouseButton",
@@ -50,14 +50,35 @@ class Config:
             "Mouse": {
                 "mouse_dpi": "800",
                 "mouse_sensitivity": "1.0",
-                "mouse_fov_width": "200",
-                "mouse_fov_height": "200",
+                "mouse_fov_width": "90",
+                "mouse_fov_height": "73.74",
                 "mouse_min_speed_multiplier": "0.1",
                 "mouse_max_speed_multiplier": "1.0",
                 "mouse_lock_target": "false",
                 "mouse_auto_aim": "false",
                 "mouse_ghub": "false",
                 "mouse_rzr": "false",
+                "windows_sensitivity": "6",
+                "m_yaw": "0.022",
+                "m_pitch": "0.022",
+                "mouse_deadzone": "2.0",
+                "magnetic_strength": "3.5",
+                "magnetic_smoothing": "0.15",
+                "max_move_per_frame": "500",
+                "mouse_calib_scale": "1.0",
+                "lock_sens_guard": "5.0",
+                "lock_max_zone_px": "480",
+                "lock_max_move_px": "140",
+                "lock_settle_px": "3",
+                "lock_dwell_frames": "6",
+                "head_snap_mode": "true",
+                "head_snap_factor": "1.0",
+                "display_width": "0",
+                "display_height": "0",
+                "pid_enabled": "false",
+                "pid_kp": "0.65",
+                "pid_ki": "0.08",
+                "pid_kd": "0.0003",
             },
             "Shooting": {
                 "auto_shoot": "false",
@@ -105,6 +126,25 @@ class Config:
                 "spawn_window_pos_y": "100",
                 "debug_window_scale_percent": "100",
                 "debug_window_screenshot_key": "F12",
+            },
+            "Team Filter": {
+                "team_filter_enabled": "false",
+                "my_team": "CT",
+                "debug_team_color": "false",
+                # CT side — blue / navy
+                "ct_hue_min": "90",
+                "ct_hue_max": "130",
+                "ct_sat_min": "50",
+                "ct_sat_max": "255",
+                "ct_val_min": "40",
+                "ct_val_max": "200",
+                # T side — orange / sand / brown
+                "t_hue_min": "10",
+                "t_hue_max": "35",
+                "t_sat_min": "60",
+                "t_sat_max": "255",
+                "t_val_min": "60",
+                "t_val_max": "230",
             },
         }
 
@@ -264,6 +304,27 @@ class Config:
         self.mouse_auto_aim = self._ensure_and_get(s, "mouse_auto_aim", False, self._to_bool)
         self.mouse_ghub = self._ensure_and_get(s, "mouse_ghub", False, self._to_bool)
         self.mouse_rzr = self._ensure_and_get(s, "mouse_rzr", False, self._to_bool)
+        self.windows_sensitivity = self._ensure_and_get(s, "windows_sensitivity", 6, int)
+        self.m_yaw = self._ensure_and_get(s, "m_yaw", 0.022, float)
+        self.m_pitch = self._ensure_and_get(s, "m_pitch", 0.022, float)
+        self.mouse_deadzone = self._ensure_and_get(s, "mouse_deadzone", 1.5, float)
+        self.magnetic_strength = self._ensure_and_get(s, "magnetic_strength", 3.5, float)
+        self.magnetic_smoothing = self._ensure_and_get(s, "magnetic_smoothing", 0.15, float)
+        self.max_move_per_frame = self._ensure_and_get(s, "max_move_per_frame", 500, int)
+        self.mouse_calib_scale = self._ensure_and_get(s, "mouse_calib_scale", 1.0, float)
+        self.lock_sens_guard = self._ensure_and_get(s, "lock_sens_guard", 5.0, float)
+        self.lock_max_zone_px = self._ensure_and_get(s, "lock_max_zone_px", 480.0, float)
+        self.lock_max_move_px = self._ensure_and_get(s, "lock_max_move_px", 140.0, float)
+        self.lock_settle_px = self._ensure_and_get(s, "lock_settle_px", 3.0, float)
+        self.lock_dwell_frames = self._ensure_and_get(s, "lock_dwell_frames", 6, int)
+        self.head_snap_mode = self._ensure_and_get(s, "head_snap_mode", True, self._to_bool)
+        self.head_snap_factor = self._ensure_and_get(s, "head_snap_factor", 1.0, float)
+        self.display_width = self._ensure_and_get(s, "display_width", 0, int)
+        self.display_height = self._ensure_and_get(s, "display_height", 0, int)
+        self.pid_enabled = self._ensure_and_get(s, "pid_enabled", False, self._to_bool)
+        self.pid_kp = self._ensure_and_get(s, "pid_kp", 0.65, float)
+        self.pid_ki = self._ensure_and_get(s, "pid_ki", 0.08, float)
+        self.pid_kd = self._ensure_and_get(s, "pid_kd", 0.0003, float)
 
         # Shooting
         s = "Shooting"
@@ -318,6 +379,26 @@ class Config:
         self.debug_window_screenshot_key = self._ensure_and_get(s, "debug_window_screenshot_key", "F12", str)
 
         self.debug_window_name = self.window_name
+
+        # Team Filter
+        s = "Team Filter"
+        self.team_filter_enabled = self._ensure_and_get(s, "team_filter_enabled", False, self._to_bool)
+        self.my_team             = self._ensure_and_get(s, "my_team", "CT", str)
+        self.debug_team_color    = self._ensure_and_get(s, "debug_team_color", False, self._to_bool)
+        # CT HSV range
+        self.ct_hue_min = self._ensure_and_get(s, "ct_hue_min", 90,  int)
+        self.ct_hue_max = self._ensure_and_get(s, "ct_hue_max", 130, int)
+        self.ct_sat_min = self._ensure_and_get(s, "ct_sat_min", 50,  int)
+        self.ct_sat_max = self._ensure_and_get(s, "ct_sat_max", 255, int)
+        self.ct_val_min = self._ensure_and_get(s, "ct_val_min", 40,  int)
+        self.ct_val_max = self._ensure_and_get(s, "ct_val_max", 200, int)
+        # T HSV range
+        self.t_hue_min  = self._ensure_and_get(s, "t_hue_min",  10,  int)
+        self.t_hue_max  = self._ensure_and_get(s, "t_hue_max",  35,  int)
+        self.t_sat_min  = self._ensure_and_get(s, "t_sat_min",  60,  int)
+        self.t_sat_max  = self._ensure_and_get(s, "t_sat_max",  255, int)
+        self.t_val_min  = self._ensure_and_get(s, "t_val_min",  60,  int)
+        self.t_val_max  = self._ensure_and_get(s, "t_val_max",  230, int)
 
     @staticmethod
     def _to_bool(v: str) -> bool:

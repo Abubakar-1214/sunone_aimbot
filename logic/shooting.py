@@ -1,6 +1,7 @@
 import queue
 import threading
 import os
+import time
 
 from logic.config_watcher import cfg
 from logic.logger import logger
@@ -61,19 +62,28 @@ class Shooting(threading.Thread):
             self._ensure_hardware()
             should_press = False
 
-            if cfg.mouse_auto_aim and bScope:
+            if (cfg.mouse_auto_aim or cfg.auto_shoot or cfg.triggerbot) and bScope:
                 should_press = True
-            elif cfg.auto_shoot and cfg.triggerbot:
-                should_press = bScope
             elif cfg.auto_shoot:
                 should_press = shooting_state and bScope
 
-            if should_press and not self.button_pressed:
-                self._press()
-                self.button_pressed = True
-            elif not should_press and self.button_pressed:
-                self._release()
-                self.button_pressed = False
+            if should_press:
+                now = time.perf_counter()
+                last_shot = getattr(self, '_last_shot_time', 0.0)
+                # 110ms tap interval: guarantees zero weapon recoil view punch in CS2
+                if now - last_shot >= 0.110:
+                    self._last_shot_time = now
+                    self._tap()
+            else:
+                if self.button_pressed:
+                    self._release()
+                    self.button_pressed = False
+
+    def _tap(self):
+        self._press()
+        time.sleep(0.025)
+        self._release()
+        self.button_pressed = False
 
     def _ensure_hardware(self):
         global RZCONTROL, MOUSE_CLICK
@@ -94,7 +104,7 @@ class Shooting(threading.Thread):
     def _press(self):
         if cfg.mouse_rzr:
             self.rzr.mouse_click(MOUSE_CLICK.LEFT_DOWN)
-        elif cfg.mouse_ghub:
+        elif cfg.mouse_ghub and self.ghub and getattr(self.ghub, 'gmok', False):
             self.ghub.mouse_down()
         elif cfg.arduino_shoot:
             from logic.arduino import arduino
@@ -106,7 +116,7 @@ class Shooting(threading.Thread):
     def _release(self):
         if cfg.mouse_rzr:
             self.rzr.mouse_click(MOUSE_CLICK.LEFT_UP)
-        elif cfg.mouse_ghub:
+        elif cfg.mouse_ghub and self.ghub and getattr(self.ghub, 'gmok', False):
             self.ghub.mouse_up()
         elif cfg.arduino_shoot:
             from logic.arduino import arduino

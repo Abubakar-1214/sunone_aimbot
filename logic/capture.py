@@ -281,6 +281,10 @@ class Capture(threading.Thread):
 
         return next((m for m in monitors if m.is_primary), monitors[0])
 
+    def bounds(self):
+        """Captured region in physical screen pixels: (left, top, right, bottom)."""
+        return self.calculate_screen_offset()
+
     def get_primary_display_resolution(self):
         monitor = self.get_primary_display()
         return monitor.width, monitor.height
@@ -313,6 +317,7 @@ class Capture(threading.Thread):
         logger.info(f"""
 Sunone Aimbot is started! (Version {version})
 Hotkeys:
+[F1] - TOGGLE AUTO AIM & FIRE (Sound On/Off)
 [{cfg.hotkey_targeting}] - Aiming at the target
 [{cfg.hotkey_exit}] - EXIT
 [{cfg.hotkey_pause}] - PAUSE AIM

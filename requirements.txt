@@ -1,5 +1,6 @@
 cuda_python
 bettercam; platform_system == "Windows"
+filterpy
 numpy
 pywin32; platform_system == "Windows"
 screeninfo
@@ -24,3 +25,4 @@ fastapi
 httpx
 uvicorn[standard]
 python-multipart
+simple-pid

@@ -83,6 +83,16 @@ if not errorlevel 1 (
     exit /b 0
 )
 
+python -c "from logic.config_watcher import cfg; import sys; sys.exit(0 if str(cfg.AI_device).strip().lower().startswith('cpu') else 1)" >nul 2>&1
+if not errorlevel 1 goto cpu_mode_ready
+goto not_cpu_mode
+
+:cpu_mode_ready
+echo [INFO] CPU mode detected: AI_device is set to cpu. Skipping CUDA requirement.
+exit /b 0
+
+:not_cpu_mode
+
 echo [INFO] PyTorch CUDA support is not available. Installing PyTorch for CUDA 12.8...
 python -m pip uninstall torch torchvision torchaudio -y
 if errorlevel 1 (

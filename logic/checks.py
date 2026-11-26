@@ -163,7 +163,7 @@ def run_checks():
         logger.error(f"The AI model {cfg.AI_model_name} has not been found! Check the correctness of the model name in the AI_model_name option.")
         raise SystemExit(1)
     
-    if cfg.AI_model_name.endswith(".onnx"):
+    if not _is_cpu_device() and cfg.AI_model_name.endswith(".onnx"):
         fp16 = check_model_fp16()
         if fp16 == False:
             check_converted_model = cfg.AI_model_name.replace(".onnx", "_fp16.onnx")

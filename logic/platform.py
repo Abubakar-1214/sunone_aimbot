@@ -90,14 +90,53 @@ class InputBackend:
         with self._lock:
             return key_name in self._pressed
 
-    def move_mouse(self, x, y):
+    def move_mouse(self, x, y, abs_x=None, abs_y=None):
         if self.mode == "win32":
+            # Direct win32api mouse_event: 100% reliable hardware delta for CS2 & 3D games
             self.win32api.mouse_event(self.win32con.MOUSEEVENTF_MOVE, int(x), int(y), 0, 0)
             return True
         if self._mouse_controller is not None:
             self._mouse_controller.move(int(x), int(y))
             return True
         return False
+
+    def move_mouse_abs(self, abs_x, abs_y):
+        """
+        Move the mouse to an ABSOLUTE screen position.
+
+        This is the only way to guarantee the cursor lands exactly on a
+        detected point and stays there (relative deltas can miss by a pixel
+        and keep drifting/sliding, which looks like overshoot and no lock).
+        """
+        if self.mode == "win32":
+            screen_w = self.win32api.GetSystemMetrics(0)
+            screen_h = self.win32api.GetSystemMetrics(1)
+            nx = int(round(max(0, min(abs_x, screen_w - 1)) * 65535 / max(1, screen_w - 1)))
+            ny = int(round(max(0, min(abs_y, screen_h - 1)) * 65535 / max(1, screen_h - 1)))
+            self.win32api.mouse_event(
+                self.win32con.MOUSEEVENTF_MOVE | self.win32con.MOUSEEVENTF_ABSOLUTE,
+                nx, ny, 0, 0
+            )
+            return True
+        if self._mouse_controller is not None:
+            self._mouse_controller.position = (int(abs_x), int(abs_y))
+            return True
+        return False
+
+    def get_cursor_pos(self):
+        """
+        Real OS cursor position in physical pixels, or None if unknown.
+        Used as ground truth for 'did we actually land on the target?' checks.
+        """
+        try:
+            if self.mode == "win32":
+                return self.win32api.GetCursorPos()
+            if self._mouse_controller is not None:
+                x, y = self._mouse_controller.position
+                return (int(x), int(y))
+        except Exception:
+            return None
+        return None
 
     def left_down(self):
         if self.mode == "win32":

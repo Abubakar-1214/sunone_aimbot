@@ -1,0 +1,109 @@
+[Detection window]
+detection_window_width = 320
+detection_window_height = 320
+circle_capture = True
+
+[Capture Methods]
+capture_fps = 60
+bettercam_capture = False
+bettercam_monitor_id = 0
+bettercam_gpu_id = 0
+obs_capture = False
+obs_camera_id = 1
+mss_capture = True
+
+[Aim]
+body_y_offset = 0.35
+hideout_targets = True
+disable_headshot = False
+disable_prediction = True
+prediction_interval = 2.0
+
+[Hotkeys]
+hotkey_targeting = RightMouseButton
+hotkey_exit = F2
+hotkey_pause = F3
+hotkey_reload_config = F4
+
+[Mouse]
+mouse_dpi = 1100
+mouse_sensitivity = 3.0
+mouse_fov_width = 40
+mouse_fov_height = 40
+mouse_min_speed_multiplier = 1.0
+mouse_max_speed_multiplier = 1.0
+mouse_lock_target = False
+mouse_auto_aim = True
+mouse_ghub = False
+mouse_rzr = False
+
+[Shooting]
+auto_shoot = True
+triggerbot = True
+force_click = False
+bscope_multiplier = 1.8
+
+[Arduino]
+arduino_move = False
+arduino_shoot = False
+arduino_port = auto
+arduino_baudrate = 9600
+arduino_16_bit_mouse = False
+
+[AI]
+ai_model_name = sunxds_0.8.0.onnx
+ai_model_image_size = 320
+ai_conf = 0.2
+ai_device = cpu
+ai_enable_amd = False
+disable_tracker = False
+
+[overlay]
+show_overlay = False
+overlay_show_borders = True
+overlay_show_boxes = False
+overlay_show_target_line = False
+overlay_show_target_prediction_line = False
+overlay_show_labels = False
+overlay_show_conf = False
+
+[Debug window]
+show_window = True
+show_detection_speed = True
+show_window_fps = False
+show_boxes = True
+show_labels = False
+show_conf = True
+show_target_line = False
+show_target_prediction_line = False
+show_bscope_box = False
+show_history_points = False
+debug_window_always_on_top = True
+spawn_window_pos_x = 100
+spawn_window_pos_y = 100
+debug_window_scale_percent = 100
+debug_window_screenshot_key = End
+
+[Team Filter]
+# True karo to apni team par fire nahi hogi
+team_filter_enabled = True
+# Apni team: CT ya T
+my_team = CT
+# True karo to terminal mein HSV values print hongi (calibration ke liye)
+debug_team_color = True
+
+# CT side — blue/navy uniform (CS2 CT default range)
+ct_hue_min = 90
+ct_hue_max = 130
+ct_sat_min = 50
+ct_sat_max = 255
+ct_val_min = 40
+ct_val_max = 200
+
+# T side — orange/sand/brown uniform (CS2 T default range)
+t_hue_min = 10
+t_hue_max = 35
+t_sat_min = 60
+t_sat_max = 255
+t_val_min = 60
+t_val_max = 230
