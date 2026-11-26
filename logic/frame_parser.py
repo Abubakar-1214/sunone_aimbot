@@ -99,6 +99,13 @@ class FrameParser:
 
     def _handle_no_detections(self):
         self.locked_frames_lost += 1
+        # Detection tut gayi => crosshair turant chhod do. Ye pehli frame par
+        # hi hota hai (koi grace/memory nahi): aim thread ka goal clear ho jata
+        # hai, is liye purani position par lock nahi rehta.
+        try:
+            mouse.release_target()
+        except Exception:
+            pass
         # Target memory: Target ko 15-25 frames tak pakad kar rakhe, chhore na
         max_lost = 25 if shooting.button_pressed else 15
         if self.locked_frames_lost > max_lost:

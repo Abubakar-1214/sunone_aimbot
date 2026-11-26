@@ -68,37 +68,51 @@ def init():
     from logic.frame_parser import frameParser
     from logic.hotkeys_watcher import hotkeys_watcher
     from logic.shooting import shooting
+    from logic.mouse import mouse
+
+    # Start the high-rate aim loop. The detection thread only publishes a goal;
+    # this loop does the actual movement every `mouse_aim_tick_ms`, so the
+    # crosshair reaches the detected point in milliseconds instead of waiting
+    # for the next model frame.
+    mouse.start()
 
     tracker = ByteTrackTracker() if not cfg.disable_tracker else None
-    
+
     try:
         model = YOLO(f"models/{cfg.AI_model_name}", task="detect")
     except Exception as e:
         logger.error(f"An error occurred when loading the AI model:\n{e}")
         raise SystemExit(0)
-        
-    while True:
-        image = capture.get_new_frame()
 
-        if image is None:
-            continue
+    try:
+        while True:
+            image = capture.get_new_frame()
 
-        if cfg.circle_capture:
-            image = capture.convert_to_circle(image)
+            if image is None:
+                continue
 
-        if hotkeys_watcher.app_pause != 0:
-            visuals.clear()
-            shooting.shoot(False, False)
+            if cfg.circle_capture:
+                image = capture.convert_to_circle(image)
+
+            if hotkeys_watcher.app_pause != 0:
+                visuals.clear()
+                shooting.shoot(False, False)
+                # paused: drop the goal so the aim loop cannot move the mouse
+                mouse.release_target()
+                if cfg.show_window or cfg.show_overlay:
+                    visuals.submit_frame(image)
+                continue
+
+            result = perform_detection(model, image, tracker)
+            frameParser.current_frame = image   # team_filter ke liye frame pass karna
+            frameParser.parse(result)
+
             if cfg.show_window or cfg.show_overlay:
                 visuals.submit_frame(image)
-            continue
-
-        result = perform_detection(model, image, tracker)
-        frameParser.current_frame = image   # team_filter ke liye frame pass karna
-        frameParser.parse(result)
-
-        if cfg.show_window or cfg.show_overlay:
-            visuals.submit_frame(image)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        mouse.stop()
 
 if __name__ == "__main__":
     init()

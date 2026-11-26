@@ -71,6 +71,17 @@ class Config:
                 "lock_max_move_px": "140",
                 "lock_settle_px": "3",
                 "lock_dwell_frames": "6",
+                # high-rate aim loop: how often the crosshair is corrected
+                # between two detections (4 ms = 250 Hz)
+                "mouse_aim_tick_ms": "4",
+                # the loop pushes once per detection, then waits for a fresh
+                # goal; this is the safety net if a goal is never refreshed
+                "mouse_release_ms": "0",
+                "mouse_reaction_delay_ms": "0",
+                # depth compensation from the box height
+                "depth_fov_deg": "0",
+                "depth_ref_height_px": "0",
+                "predict_lookahead_ms": "0",
                 "head_snap_mode": "true",
                 "head_snap_factor": "1.0",
                 "display_width": "0",
@@ -317,6 +328,12 @@ class Config:
         self.lock_max_move_px = self._ensure_and_get(s, "lock_max_move_px", 140.0, float)
         self.lock_settle_px = self._ensure_and_get(s, "lock_settle_px", 3.0, float)
         self.lock_dwell_frames = self._ensure_and_get(s, "lock_dwell_frames", 6, int)
+        self.mouse_aim_tick_ms = self._ensure_and_get(s, "mouse_aim_tick_ms", 4.0, float)
+        self.mouse_release_ms = self._ensure_and_get(s, "mouse_release_ms", 0.0, float)
+        self.mouse_reaction_delay_ms = self._ensure_and_get(s, "mouse_reaction_delay_ms", 0.0, float)
+        self.depth_fov_deg = self._ensure_and_get(s, "depth_fov_deg", 0.0, float)
+        self.depth_ref_height_px = self._ensure_and_get(s, "depth_ref_height_px", 0.0, float)
+        self.predict_lookahead_ms = self._ensure_and_get(s, "predict_lookahead_ms", 0.0, float)
         self.head_snap_mode = self._ensure_and_get(s, "head_snap_mode", True, self._to_bool)
         self.head_snap_factor = self._ensure_and_get(s, "head_snap_factor", 1.0, float)
         self.display_width = self._ensure_and_get(s, "display_width", 0, int)
